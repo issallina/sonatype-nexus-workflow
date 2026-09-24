@@ -1,0 +1,47 @@
+name: Packer AMI Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  packer:
+    name: 'Packer Build'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Private Infrastructure Repository
+      uses: actions/checkout@v4
+      with:
+        repository: 'issallina/sonatype-nexus-project' 
+        token: ${{ secrets.INFRA_REPO_PAT }}
+        path: sonatype-nexus-project 
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # default
+
+    - name: Setup Packer
+      uses: hashicorp/setup-packer@main
+      with:
+        version: "latest"
+
+    - name: Packer Init
+      run: |
+        cd sonatype-nexus-project/packer
+        packer init .
+
+    # 5. Run the Packer Build and securely map your new variables via env overrides
+    - name: Packer Build
+      run: |
+        cd sonatype-nexus-project/packer
+        packer build .
+      env:
+        PKR_VAR_source_ami: ${{ secrets.PACKER_SOURCE_AMI }}
+        PKR_VAR_security_group_id: ${{ secrets.PACKER_SG_ID }}
+        PKR_VAR_ssh_keypair_name: ${{ secrets.PACKER_KEY_NAME }}
