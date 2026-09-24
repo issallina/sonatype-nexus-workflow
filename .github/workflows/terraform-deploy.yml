@@ -60,7 +60,7 @@ jobs:
           
           if [[ "${{ inputs.actions }}" == "apply" ]]
           then 
-            terraform apply -auto-approve
+            terraform apply -input=false -auto-approve
           else 
             terraform destroy -auto-approve
           fi
