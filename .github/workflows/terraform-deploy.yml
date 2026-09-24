@@ -55,12 +55,12 @@ jobs:
       - name: Terraform Apply or Destroy
         run: |
           cd sonatype-nexus-project/terraform
-          
-          STATE_FILE="terraform-${{ inputs.environment }}.tfstate"
+                    
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
           
           if [[ "${{ inputs.actions }}" == "apply" ]]
           then 
-            terraform apply -state="$STATE_FILE" -auto-approve
+            terraform apply -auto-approve
           else 
-            terraform destroy -state="$STATE_FILE" -auto-approve
+            terraform destroy -auto-approve
           fi
