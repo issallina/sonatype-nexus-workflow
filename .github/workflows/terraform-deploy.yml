@@ -33,7 +33,16 @@ jobs:
           path: sonatype-nexus-project 
 
       - name: Create tfvars file
-        run: echo "$TFVARS_CONTENT" > sonatype-nexus-project/terraform/terraform.tfvars
+        run: |
+          # Step A: Dump the secret into the folder
+          echo "$TFVARS_CONTENT" > sonatype-nexus-project/terraform/terraform.tfvars
+          
+          # Step B: DIAGNOSTIC LOGS (This will show up in your GitHub Actions console)
+          echo "=== Checking if file exists inside terraform directory ==="
+          ls -la sonatype-nexus-project/terraform/
+          
+          echo "=== Printing contents of the generated file ==="
+          cat sonatype-nexus-project/terraform/terraform.tfvars
         env:
           TFVARS_CONTENT: ${{ secrets.TFVARS }}
 
