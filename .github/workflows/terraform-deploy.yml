@@ -17,34 +17,33 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
-        description: Please select environment to deploy to
+        description: Please select region
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event.inputs.environment }}
     
     steps:
       - name: Checkout Private Infrastructure Repository
         uses: actions/checkout@v4
         with:
-          repository: 'issallina/sonatype-nexus-project'
+          repository: 'YOUR-GITHUB-USERNAME/sonatype-nexus-project' # <-- Update this!
           token: ${{ secrets.INFRA_REPO_PAT }}
-          path: sonatype-nexus-project 
+          path: sonatype-nexus-project
 
       - name: Create tfvars file
         run: |
-          # Step A: Dump the secret into the folder
-          echo "$TFVARS_CONTENT" > sonatype-nexus-project/terraform/terraform.tfvars
+          cat << 'EOF' > sonatype-nexus-project/terraform/terraform.tfvars
+          ${{ secrets.TFVARS }}
+          EOF
           
-          # Step B: DIAGNOSTIC LOGS (This will show up in your GitHub Actions console)
-          echo "=== Checking if file exists inside terraform directory ==="
-          ls -la sonatype-nexus-project/terraform/
-          
-          echo "=== Printing contents of the generated file ==="
-          cat sonatype-nexus-project/terraform/terraform.tfvars
-        env:
-          TFVARS_CONTENT: ${{ secrets.TFVARS }}
+          echo "=== Diagnostic Check ==="
+          if [ -s sonatype-nexus-project/terraform/terraform.tfvars ]; then
+            echo "Success: terraform.tfvars was created and is not empty!"
+          else
+            echo "Error: terraform.tfvars is empty! Check your GitHub Environment secrets."
+          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -54,22 +53,23 @@ jobs:
         with: 
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.environment }}
+          aws-region: ${{ github.event.inputs.environment }}
 
       - name: Terraform Init
         run: |
           cd sonatype-nexus-project/terraform
-          terraform init
+          terraform init -input=false
 
       - name: Terraform Apply or Destroy
         run: |
           cd sonatype-nexus-project/terraform
-                    
-          terraform workspace select -or-create ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
           
-          if [[ "${{ inputs.actions }}" == "apply" ]]
+          # Safely select or create the workspace matching your region dropdown choice
+          terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          
+          if [[ "${{ github.event.inputs.actions }}" == "apply" ]]
           then 
             terraform apply -input=false -auto-approve
           else 
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           fi
