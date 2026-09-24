@@ -28,7 +28,7 @@ jobs:
       - name: Checkout Private Infrastructure Repository
         uses: actions/checkout@v4
         with:
-          repository: 'issallina//sonatype-nexus-project'
+          repository: 'issallina/sonatype-nexus-project'
           token: ${{ secrets.INFRA_REPO_PAT }}
           path: sonatype-nexus-project 
 
