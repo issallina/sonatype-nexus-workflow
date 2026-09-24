@@ -17,7 +17,7 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
-        description: Please select region
+        description: Please select environment to deploy to
 
 jobs:
   deploy:
