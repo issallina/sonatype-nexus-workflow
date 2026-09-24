@@ -56,7 +56,7 @@ jobs:
         run: |
           cd sonatype-nexus-project/terraform
                     
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select -or-create ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
           
           if [[ "${{ inputs.actions }}" == "apply" ]]
           then 
