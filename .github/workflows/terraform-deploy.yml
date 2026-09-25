@@ -10,40 +10,32 @@ on:
           - destroy
         description: Please select apply or destroy
 
-      environment: 
+      region: 
         type: choice
         options:
           - us-east-1
           - us-east-2
           - us-west-1
           - us-west-2
-        description: Please select region
+        description: Please select region to deploy to
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ inputs.region }}
     
     steps:
       - name: Checkout Private Infrastructure Repository
         uses: actions/checkout@v4
         with:
-          repository: 'issallina/sonatype-nexus-project' 
+          repository: 'issallina/sonatype-nexus-project'
           token: ${{ secrets.INFRA_REPO_PAT }}
-          path: sonatype-nexus-project
+          path: sonatype-nexus-project 
 
       - name: Create tfvars file
-        run: |
-          cat << 'EOF' > sonatype-nexus-project/terraform/terraform.tfvars
-          ${{ secrets.TFVARS }}
-          EOF
-          
-          echo "=== Diagnostic Check ==="
-          if [ -s sonatype-nexus-project/terraform/terraform.tfvars ]; then
-            echo "Success: terraform.tfvars was created and is not empty!"
-          else
-            echo "Error: terraform.tfvars is empty! Check your GitHub Environment secrets."
-          fi
+        run: echo "$TFVARS_CONTENT" > sonatype-nexus-project/terraform/terraform.tfvars
+        env:
+          TFVARS_CONTENT: ${{ secrets.TFVARS }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -53,23 +45,22 @@ jobs:
         with: 
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.environment }}
+          aws-region: ${{ inputs.region }}
 
       - name: Terraform Init
         run: |
           cd sonatype-nexus-project/terraform
-          terraform init -input=false
+          terraform init
 
       - name: Terraform Apply or Destroy
         run: |
           cd sonatype-nexus-project/terraform
+                    
+          terraform workspace select -or-create ${{ inputs.region }} || terraform workspace new ${{ inputs.region }}
           
-          # Safely select or create the workspace matching your region dropdown choice
-          terraform workspace select -or-create ${{ github.event.inputs.environment }}
-          
-          if [[ "${{ github.event.inputs.actions }}" == "apply" ]]
+          if [[ "${{ inputs.actions }}" == "apply" ]]
           then 
             terraform apply -input=false -auto-approve
           else 
-            terraform destroy -input=false -auto-approve
+            terraform destroy -auto-approve
           fi
