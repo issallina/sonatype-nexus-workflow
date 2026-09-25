@@ -32,8 +32,11 @@ jobs:
           token: ${{ secrets.INFRA_REPO_PAT }}
           path: sonatype-nexus-project 
 
-      - name: Create tfvars file
-        run: echo "$TFVARS_CONTENT" > sonatype-nexus-project/terraform/terraform.tfvars
+      - name: Create tfvars files
+        run: |
+          cat << 'EOF' > sonatype-nexus-project/terraform/terraform.tfvars
+          ${{ secrets.TFVARS }}
+          EOF
         env:
           TFVARS_CONTENT: ${{ secrets.TFVARS }}
 
