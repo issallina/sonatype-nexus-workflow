@@ -34,7 +34,7 @@ jobs:
 
       - name: Create tfvars files
         run: |
-          cat << 'EOF' > sonatype-nexus-project/terraform/terraform.tfvars
+          cat << 'EOF' > sonatype-nexus-project/terraform/${{ inputs.region }}.tfvars
           ${{ secrets.TFVARS }}
           EOF
         env:
@@ -63,7 +63,7 @@ jobs:
           
           if [[ "${{ inputs.actions }}" == "apply" ]]
           then 
-            terraform apply -input=false -auto-approve
+            terraform apply -var-file=${{ inputs.region }}.tfvars -input=false -auto-approve
           else 
-            terraform destroy -auto-approve
+            terraform destroy -var-file=${{ inputs.region }}.tfvars -auto-approve
           fi
