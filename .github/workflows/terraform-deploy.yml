@@ -3,26 +3,26 @@ name: Sonatype Nexus CD
 on: 
   workflow_dispatch: 
     inputs: 
-      actions:
+      action:
         type: choice
         options:
           - apply
           - destroy
         description: Please select apply or destroy
 
-      region: 
+      environment: 
         type: choice
         options:
           - us-east-1
-          - us-east-2
+          - us-east-2s
           - us-west-1
           - us-west-2
-        description: Please select region to deploy to
+        description: Please select region
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.region }}
+    environment: ${{ inputs.environment }}
     
     steps:
       - name: Checkout Private Infrastructure Repository
@@ -32,13 +32,11 @@ jobs:
           token: ${{ secrets.INFRA_REPO_PAT }}
           path: sonatype-nexus-project 
 
-      - name: Create tfvars files
+      - name: Create tfvars file
         run: |
-          cat << 'EOF' > sonatype-nexus-project/terraform/${{ inputs.region }}.tfvars
+          cat << 'EOF' > terraform.tfvars
           ${{ secrets.TFVARS }}
           EOF
-        env:
-          TFVARS_CONTENT: ${{ secrets.TFVARS }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -48,22 +46,21 @@ jobs:
         with: 
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.region }}
+          aws-region: ${{ inputs.environment }}
 
       - name: Terraform Init
         run: |
           cd sonatype-nexus-project/terraform
           terraform init
 
+      - name: Terraform Init
+        run: terraform init -backend-config=key="${{ inputs.environment }}/terraform.tfstate"
+
       - name: Terraform Apply or Destroy
-        run: |
-          cd sonatype-nexus-project/terraform
-                    
-          terraform workspace select -or-create ${{ inputs.region }} || terraform workspace new ${{ inputs.region }}
-          
-          if [[ "${{ inputs.actions }}" == "apply" ]]
-          then 
-            terraform apply -var-file=${{ inputs.region }}.tfvars -input=false -auto-approve
-          else 
-            terraform destroy -var-file=${{ inputs.region }}.tfvars -auto-approve
-          fi
+        run: |                    
+            if [[ ${{ inputs.action }} == "apply" ]]
+            then
+                terraform apply -auto-approve
+            else
+                terraform destroy -auto-approve
+            fi
