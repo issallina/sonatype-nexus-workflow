@@ -26,7 +26,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./terraform
+        working-directory: ./sonatype-nexus-project/terraform
     
     steps:
       - name: Checkout Private Infrastructure Repository
@@ -57,7 +57,7 @@ jobs:
 
       - name: Terraform Apply or Destroy
         run: |                    
-            if [[ ${{ inputs.action }} == "apply" ]]
+            if [[ "${{ inputs.action }}" == "apply" ]]
             then
                 terraform apply -auto-approve
             else
