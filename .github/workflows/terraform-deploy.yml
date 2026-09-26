@@ -33,6 +33,7 @@ jobs:
           path: sonatype-nexus-project 
 
       - name: Create tfvars file
+        working-directory: sonatype-nexus-project/terraform 
         run: |
           cat << 'EOF' > terraform.tfvars
           ${{ secrets.TFVARS }}
@@ -49,14 +50,11 @@ jobs:
           aws-region: ${{ inputs.environment }}
 
       - name: Terraform Init
-        run: |
-          cd sonatype-nexus-project/terraform
-          terraform init
-
-      - name: Terraform Init
+        working-directory: sonatype-nexus-project/terraform
         run: terraform init -backend-config=key="${{ inputs.environment }}/terraform.tfstate"
 
       - name: Terraform Apply or Destroy
+        working-directory: sonatype-nexus-project/terraform
         run: |                    
             if [[ ${{ inputs.action }} == "apply" ]]
             then
