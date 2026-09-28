@@ -68,7 +68,7 @@ The result is an AMI created by the Packer configuration in the private infrastr
 
 File: `.github/workflows/terraform-deploy.yml`
 
-CD means continuous delivery. This workflow is used to create or remove the Sonatype Nexus infrastructure.
+This workflow is used to create or remove the Sonatype Nexus infrastructure.
 
 ### When it runs
 
@@ -131,13 +131,4 @@ The `destroy` option can remove AWS resources. Review the selected region, Terra
 └── README.md
 ```
 
-The Terraform and Packer source files are stored in the private `sonatype-nexus-project` repository, not in this repository.
-
-## Troubleshooting
-
-- **Repository checkout fails:** Check `INFRA_REPO_PAT`, repository access, and the repository name in the workflow.
-- **AWS authentication fails:** Check both AWS secrets and confirm that the credentials are valid for the selected region.
-- **Packer variables are missing:** Check `PACKER_SOURCE_AMI`, `PACKER_SG_ID`, and `PACKER_KEY_NAME`.
-- **Terraform variables are missing:** Check that `TFVARS` contains valid Terraform variable assignments and is configured in the GitHub environment used for the run.
-- **Terraform uses the wrong state:** Confirm the selected region and the corresponding `terraform-<region>.tfstate` file.
-- **Terraform cannot initialize:** Check the Terraform backend settings and AWS permissions in the private infrastructure repository.
+The Terraform and Packer source files are stored in the private `sonatype-nexus-project` repository.
