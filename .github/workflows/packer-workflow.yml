@@ -1,0 +1,93 @@
+name: AMI Lifecycle Management
+
+on: 
+  workflow_dispatch: 
+    inputs: 
+      action:
+        type: choice
+        options:
+          - apply
+          - destroy
+        description: Please select apply or destroy
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Private Infrastructure Repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'issallina/sonatype-nexus-project'
+          token: ${{ secrets.INFRA_REPO_PAT }}
+          path: sonatype-nexus-project 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 
+
+      - name: Setup Packer (Apply)
+        if: ${{ inputs.action == 'apply' }}
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Run Packer Build
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ./sonatype-nexus-project/packer
+        run: |
+          packer init .
+          packer build .
+        env:
+          PKR_VAR_source_ami: ${{ secrets.PACKER_SOURCE_AMI }}
+          PKR_VAR_security_group_id: ${{ secrets.PACKER_SG_ID }}
+          PKR_VAR_ssh_keypair_name: ${{ secrets.PACKER_KEY_NAME }}
+      
+      
+      - name: Setup Ansible & Dependencies (Destroy)
+        if: ${{ inputs.action == 'destroy' }}
+        run: |
+          pip install boto3 botocore
+          ansible-galaxy collection install amazon.aws
+
+      - name: Run Global Ansible AMI Purge
+        if: ${{ inputs.action == 'destroy' }}
+        run: |
+          AWS_REGIONS='["us-east-1", "us-east-2", "us-west-1", "us-west-2"]'
+
+          ansible-playbook -i "localhost," -c local -e "target_regions=$AWS_REGIONS" - << 'EOF'
+          ---
+          - name: Purge Nexus AMIs Globally
+            hosts: localhost
+            gather_facts: false
+            tasks:
+              - name: Loop cleanup logic across all specified US regions
+                include_tasks: region_cleanup.yml
+                loop: "{{ target_regions }}"
+                loop_control:
+                  loop_var: current_region
+
+          - name: Create execution block for dynamic inclusion
+            copy:
+              dest: region_cleanup.yml
+              content: |
+                - name: "Query existing AMIs matching Nexus in {{ current_region }}"
+                  amazon.aws.ec2_ami_info:
+                    region: "{{ current_region }}"
+                    owners: self
+                    filters:
+                      name: "*nexus*"
+                  register: ami_results
+
+                - name: "Deregister AMIs and wipe snapshots in {{ current_region }}"
+                  amazon.aws.ec2_ami:
+                    region: "{{ current_region }}"
+                    image_id: "{{ item.image_id }}"
+                    state: absent
+                    delete_snapshot: true
+                  loop: "{{ ami_results.images }}"
+                  when: ami_results.images | length > 0
+          EOF
