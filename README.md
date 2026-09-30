@@ -8,7 +8,8 @@ The workflows use files from the private `sonatype-nexus-project` repository. Th
 
 | Workflow | File | How it starts | Main purpose |
 | --- | --- | --- | --- |
-| Packer AMI Build | `.github/workflows/packer-build.yml` | Push to `main` or manual run | Builds an AWS machine image with Packer |
+| Packer AMI Build | `.github/workflows/packer-build.yml` | Manual run only | Builds an AWS machine image with Packer |
+| AMI Lifecycle Management | `.github/workflows/packer-workflow.yml` | Manual run only | Builds an AMI or purges AMIs using the selected action |
 | Sonatype Nexus CD | `.github/workflows/terraform-deploy.yml` | Manual run only | Creates or removes the infrastructure with Terraform |
 
 ## Required setup
@@ -36,33 +37,34 @@ The workflows use AWS region `us-east-1` for the Packer build. The Terraform wor
 
 Do not commit AWS credentials, personal access tokens, Terraform variable files, or other secret values to this repository.
 
-## Packer AMI Build
+## Packer AMI Lifecycle Management
 
-File: `.github/workflows/packer-build.yml`
+File: `.github/workflows/packer-workflow.yml`
 
 ### When it runs
 
-This workflow runs in either of these cases:
+This workflow runs only when a user starts it manually with **Run workflow**. Select one of these actions:
 
-- A commit is pushed to the `main` branch.
-- A user starts it manually with **Run workflow**. Manual runs do not need any input values.
+| Action | Result |
+| --- | --- |
+| `apply` | Initializes and runs the Packer build to create an AMI |
+| `destroy` | Runs `sonatype-nexus-project/packer/packer-destroy.sh` to purge AMIs |
 
 ### What it does
 
-The workflow runs one job named `Packer Build` on an Ubuntu runner:
+The workflow runs on an Ubuntu runner and checks out the private `sonatype-nexus-project` repository. For `apply`, it:
 
-1. Checks out the private `sonatype-nexus-project` repository into the `sonatype-nexus-project` directory.
-2. Connects to AWS using `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-3. Uses AWS region `us-east-1`.
-4. Installs the latest Packer version.
-5. Changes to `sonatype-nexus-project/packer` and runs `packer init`.
-6. Runs `packer build` in the same directory.
-7. Passes the Packer values through environment variables:
+1. Connects to AWS using `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in region `us-east-1`.
+2. Installs the latest Packer version.
+3. Runs `packer init .` and `packer build .` in `sonatype-nexus-project/packer`.
+4. Passes the Packer values through environment variables:
 	- `PACKER_SOURCE_AMI` becomes `PKR_VAR_source_ami`.
 	- `PACKER_SG_ID` becomes `PKR_VAR_security_group_id`.
 	- `PACKER_KEY_NAME` becomes `PKR_VAR_ssh_keypair_name`.
 
-The result is an AMI created by the Packer configuration in the private infrastructure repository. The workflow itself does not deploy that AMI to other environments.
+For `destroy`, the workflow runs the AMI purge script instead of setting up Packer or building an image.
+
+
 
 ## Sonatype Nexus CD
 
@@ -80,6 +82,27 @@ This workflow only runs when a user starts it manually. The user must select bot
 | `environment` | `us-east-1`, `us-east-2`, `us-west-1`, `us-west-2` | AWS region and GitHub environment to use |
 
 The selected value is also used as the GitHub Actions environment name. Configure environment-specific secrets and approval rules in GitHub if needed.
+
+### Required environmnet secrets
+
+| Secret | Description |
+| --- | --- |
+| `TFVARS` | Complete Terraform variable file content for the deployment |
+
+Configure `TFVARS` separately in each GitHub Environment: `us-east-1`, `us-east-2`, `us-west-1`, and `us-west-2`. Each environment's value should contain the Terraform variables for that region:
+
+```text
+region
+vpc_cidr
+subnet_cidrs
+ports
+instance_type
+ssh_public_key
+```
+
+Use Terraform variable-file syntax and values matching the variable types defined in the private infrastructure repository.
+
+
 
 ### What it does
 
@@ -102,12 +125,12 @@ The `destroy` option can remove AWS resources. Review the selected region, Terra
 
 ## Running a workflow
 
-### Run the Packer workflow manually
+### Run the Packer AMI lifecycle workflow
 
 1. Open the **Actions** tab in GitHub.
-2. Select **Packer AMI Build**.
-3. Select **Run workflow** on the `main` branch.
-4. Review the job output and the AMI created in AWS.
+2. Select **AMI Lifecycle Management**.
+3. Select **Run workflow** and choose `apply` or `destroy`.
+4. Review the job output and the resulting AMI changes in AWS.
 
 ### Run the Terraform workflow
 
