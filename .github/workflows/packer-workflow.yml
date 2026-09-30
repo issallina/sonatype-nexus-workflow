@@ -62,8 +62,8 @@ jobs:
           pip install boto3 botocore
           ansible-galaxy collection install amazon.aws
 
-      - name: Run Global Ansible AMI Purge
+      - name: Global AMI Purge
         if: ${{ inputs.action == 'destroy' }}
         run: |
-          chmod +x ./sonatype-nexus-workflow/packer-destroy.sh
-          ./sonatype-nexus-workflow/packer-destroy.sh
+          chmod +x ./sonatype-nexus-project/packer/packer-destroy.sh
+          ./sonatype-nexus-project/packer/packer-destroy.sh
