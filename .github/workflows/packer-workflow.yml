@@ -1,4 +1,4 @@
-name: AMI Lifecycle Management
+name: Packer AMI Build
 
 on: 
   workflow_dispatch: 

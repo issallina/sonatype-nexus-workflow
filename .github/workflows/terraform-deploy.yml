@@ -1,4 +1,4 @@
-name: Sonatype Nexus CD
+name: Terraform CD
 
 on: 
   workflow_dispatch: 
