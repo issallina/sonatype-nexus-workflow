@@ -65,38 +65,5 @@ jobs:
       - name: Run Global Ansible AMI Purge
         if: ${{ inputs.action == 'destroy' }}
         run: |
-          AWS_REGIONS='["us-east-1", "us-east-2", "us-west-1", "us-west-2"]'
-
-          cat << 'EOF' > purge_playbook.yml
-          ---
-          - name: Purge Nexus AMIs Globally
-            hosts: localhost
-            gather_facts: false
-            tasks:
-              - name: Loop cleanup logic across all specified US regions
-                include_tasks: region_cleanup.yml
-                loop: "{{ target_regions }}"
-                loop_control:
-                  loop_var: current_region
-          EOF
-
-          cat << 'EOF' > region_cleanup.yml
-          - name: "Query existing AMIs matching Nexus in {{ current_region }}"
-            amazon.aws.ec2_ami_info:
-              region: "{{ current_region }}"
-              owners: self
-              filters:
-                name: "*nexus*"
-            register: ami_results
-
-          - name: "Deregister AMIs and wipe snapshots in {{ current_region }}"
-            amazon.aws.ec2_ami:
-              region: "{{ current_region }}"
-              image_id: "{{ item.image_id }}"
-              state: absent
-              delete_snapshot: true
-            loop: "{{ ami_results.images }}"
-            when: ami_results.images | length > 0
-          EOF
-
-          ansible-playbook -i "localhost," -c local -e "target_regions=$AWS_REGIONS" purge_playbook.yml
+          chmod +x ./sonatype-nexus-workflow/packer-destroy.sh
+          ./sonatype-nexus-workflow/packer-destroy.sh
