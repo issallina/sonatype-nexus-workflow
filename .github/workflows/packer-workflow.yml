@@ -49,18 +49,18 @@ jobs:
 
 
       
-      - name: Setup Ansible & Dependencies (Destroy)
-        if: ${{ inputs.action == 'destroy' }}
-        run: |
-          pip install boto3 botocore
-          ansible-galaxy collection install amazon.aws
+      # - name: Setup Ansible & Dependencies (Destroy)
+      #   if: ${{ inputs.action == 'destroy' }}
+      #   run: |
+      #     pip install boto3 botocore
+      #     ansible-galaxy collection install amazon.aws
 
-      - name: Setup Ansible & Dependencies (Destroy)
-        if: ${{ inputs.action == 'destroy' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y ansible
-          pip install boto3 botocore
-          ansible-galaxy collection install amazon.aws
+      # - name: Setup Ansible & Dependencies (Destroy)
+      #   if: ${{ inputs.action == 'destroy' }}
+      #   run: |
+      #     sudo apt-get update && sudo apt-get install -y ansible
+      #     pip install boto3 botocore
+      #     ansible-galaxy collection install amazon.aws
 
       - name: Global AMI Purge
         if: ${{ inputs.action == 'destroy' }}
